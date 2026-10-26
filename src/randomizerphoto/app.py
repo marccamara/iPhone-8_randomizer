@@ -8,116 +8,57 @@ from urllib.parse import urlparse, parse_qs
 import toga
 from toga.style import Pack
 
-from rubicon.objc import ObjCClass, ObjCInstance, ObjCProtocol, NSObject, objc_method
-
 from .processing import process_folder_advanced
 
 # ============================================================
 # CONFIGURATION
 # ============================================================
 HERE = Path(__file__).parent
-APP_DOCS = Path.home() / "Documents"
+
+# C'est ici que tu déposeras tes photos via l'app Fichiers d'iOS
+APP_DOCS = Path.home() / "Documents" 
 HIST = APP_DOCS / "used_file_names.json"
-EXTS = (".jpg", ".jpeg", ".png", ".webp", ".heic")
+
+EXTS = (".jpg", ".jpeg", ".png", ".webp")
 
 # ============================================================
 # ÉTAT GLOBAL
 # ============================================================
 STATE = {
-    "base": None, "dbg": "Application prête.", "picking": False,
-    "done": 0, "total": 0, "running": False, "finished": False, "error": None,
+    "base": None, 
+    "dbg": "Application prête.", 
+    "done": 0, 
+    "total": 0, 
+    "running": False, 
+    "finished": False, 
+    "error": None,
 }
-
-REFS = {"picker": None, "delegate": None, "security_url": None}
 
 def debug(message):
     STATE["dbg"] = str(message)
     print("[RandomizerPhoto]", message)
 
-def stop_security_scope():
-    url = REFS.get("security_url")
-    if url is not None:
-        try: url.stopAccessingSecurityScopedResource()
-        except Exception: pass
-        REFS["security_url"] = None
-
 # ============================================================
-# DELEGATE IOS
+# SCAN DU DOSSIER DOCUMENTS
 # ============================================================
-UIDocumentPickerDelegate = ObjCProtocol("UIDocumentPickerDelegate")
-
-class PickerDelegate(NSObject, protocols=[UIDocumentPickerDelegate]):
-    
-    @objc_method
-    def documentPicker_didPickDocumentsAtURLs_(self, picker, urls):
-        try:
-            STATE["picking"] = False
-            if not urls:
-                STATE["base"] = None
-                return
-
-            url = urls[0]
-            stop_security_scope()
-            REFS["security_url"] = url
-
-            try: url.startAccessingSecurityScopedResource()
-            except Exception as e: print("Erreur scope:", e)
-
-            path = url.path
-            if callable(path): path = path()
-            base = Path(str(path))
-
-            if not base.exists() or not base.is_dir():
-                STATE["base"] = None
-                debug("❌ Dossier invalide.")
-                return
-
-            count = sum(1 for f in base.iterdir() if f.suffix.lower() in EXTS)
-            STATE["base"] = str(base)
-            debug(f"✅ Dossier sélectionné : {count} images")
-        except Exception:
-            STATE["base"] = None
-            traceback.print_exc()
-
-    @objc_method
-    def documentPickerWasCancelled_(self, picker):
-        STATE["picking"] = False
-        debug("Sélection annulée.")
-
-# ============================================================
-# PICKER & TRAITEMENT
-# ============================================================
-def create_folder_picker():
-    Picker = ObjCClass("UIDocumentPickerViewController")
-    UTType = ObjCClass("UTType")
-    try: folder_type = UTType.typeWithIdentifier_("public.folder")
-    except Exception: folder_type = UTType.typeWithIdentifier("public.folder")
-
+def scan_documents_folder():
+    """Scanne le dossier Documents (accessible via l'app Fichiers)."""
     try:
-        # asCopy=True est CRUCIAL pour iOS 16 et l'iPhone 8
-        picker = Picker.alloc().initForOpeningContentTypes_asCopy_([folder_type], True)
-    except Exception:
-        picker = Picker.alloc().initForOpeningContentTypes_([folder_type])
-    return picker
-
-def present_picker(app):
-    try:
-        STATE["picking"] = True
-        picker = create_folder_picker()
-        delegate = PickerDelegate.alloc().init()
+        APP_DOCS.mkdir(parents=True, exist_ok=True)
         
-        REFS["picker"], REFS["delegate"] = picker, delegate
-        picker.delegate = delegate
-        picker.allowsMultipleSelection = False
-
-        native = app.main_window._impl.native
-        window = ObjCInstance(native)
-        root = window.rootViewController
-
-        root.presentViewController(picker, animated=True, completion=None)
-        debug("📂 Picker ouvert.")
-    except Exception:
-        STATE["picking"] = False
+        files = [f for f in APP_DOCS.iterdir() if f.suffix.lower() in EXTS and not f.name.startswith(".")]
+        count = len(files)
+        
+        STATE["base"] = str(APP_DOCS)
+        
+        if count > 0:
+            debug(f"✅ {count} image(s) trouvée(s) dans le dossier.")
+        else:
+            debug("⚠️ Aucune image. Ajoute des photos dans 'Sur mon iPhone > RandomizerPhoto'.")
+            
+    except Exception as e:
+        STATE["base"] = None
+        debug(f"❌ Erreur scan : {e}")
         traceback.print_exc()
 
 def count_images(base):
@@ -125,6 +66,9 @@ def count_images(base):
     try: return sum(1 for f in Path(base).iterdir() if f.suffix.lower() in EXTS)
     except Exception: return 0
 
+# ============================================================
+# TRAITEMENT & PROGRESSION
+# ============================================================
 def progress(done, total):
     STATE["done"] = done
     STATE["total"] = total
@@ -132,12 +76,16 @@ def progress(done, total):
 def run_processing(n, model, ratio):
     STATE["running"] = True
     STATE["finished"] = False
+    STATE["error"] = None
     try:
-        if not STATE["base"]: raise RuntimeError("Aucun dossier sélectionné.")
+        if not STATE["base"]: 
+            raise RuntimeError("Aucun dossier prêt.")
+            
         base = Path(STATE["base"])
-        
         out = base / "photos_traitees"
         out.mkdir(exist_ok=True)
+
+        debug("Traitement en cours...")
 
         process_folder_advanced(
             str(base), str(out), n, str(HIST), progress, model, ratio
@@ -145,14 +93,14 @@ def run_processing(n, model, ratio):
         debug("✅ Traitement terminé.")
     except Exception as e:
         STATE["error"] = str(e)
+        debug(f"❌ Erreur traitement : {e}")
         traceback.print_exc()
     finally:
         STATE["running"] = False
         STATE["finished"] = True
-        stop_security_scope()
 
 # ============================================================
-# SERVEUR HTTP
+# SERVEUR HTTP LOCAL
 # ============================================================
 def make_handler(app):
     class Handler(BaseHTTPRequestHandler):
@@ -187,12 +135,13 @@ def make_handler(app):
                 state = dict(STATE)
                 if STATE.get("base"):
                     state["count"] = count_images(STATE["base"])
-                    state["name"] = Path(STATE["base"]).name
+                    state["name"] = "Dossier de l'App" # Nom simplifié pour l'UI
                 else:
                     state["count"] = 0
                     state["name"] = None
                 self.send_json(200, state)
                 return
+                
             self.send_json(404, {"error": "Not found"})
 
         def do_POST(self):
@@ -200,9 +149,8 @@ def make_handler(app):
             path = parsed.path
 
             if path == "/pick":
-                if not STATE["picking"]:
-                    STATE["picking"] = True
-                    app.loop.call_soon_threadsafe(present_picker, app)
+                # Plus de picker iOS, on scanne juste notre dossier Documents
+                scan_documents_folder()
                 self.send_json(200, {"ok": True})
                 return
 
@@ -212,28 +160,34 @@ def make_handler(app):
                 model = query.get("model", ["Mix"])[0]
                 ratio = query.get("ratio", ["3:4"])[0]
 
-                if STATE["base"] and not STATE["running"] and not STATE["picking"]:
+                if STATE["base"] and not STATE["running"]:
                     threading.Thread(target=run_processing, args=(n, model, ratio), daemon=True).start()
                 self.send_json(200, {"ok": True})
                 return
+                
             self.send_json(404, {"error": "Not found"})
     return Handler
 
 # ============================================================
-# TOGA APP
+# APPLICATION TOGA
 # ============================================================
 class RandomizerPhoto(toga.App):
     def startup(self):
+        # On s'assure que le dossier existe au démarrage
         APP_DOCS.mkdir(parents=True, exist_ok=True)
+
+        # Lancement du serveur web local en arrière-plan
         server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         port = server.server_address[1]
 
+        # Affichage de l'interface WebView
         self.main_window = toga.MainWindow(title=self.formal_name)
         self.main_window.content = toga.WebView(
             url=f"http://127.0.0.1:{port}/", style=Pack(flex=1)
         )
         self.main_window.show()
+        print("[RandomizerPhoto] Application prête.")
 
 def main():
     return RandomizerPhoto("RandomizerPhoto", "com.perso.randomizerphoto")
