@@ -15,6 +15,9 @@ from .processing import process_folder_advanced
 # ============================================================
 HERE = Path(__file__).parent
 APP_DOCS = Path.home() / "Documents"
+
+# Dossier source spécifique
+BASE_DIR = APP_DOCS / "base"
 HIST = APP_DOCS / "used_file_names.json"
 EXTS = (".jpg", ".jpeg", ".png", ".webp")
 
@@ -30,22 +33,19 @@ def debug(message):
 def scan_documents_folder():
     try:
         APP_DOCS.mkdir(parents=True, exist_ok=True)
+        # On s'assure que le dossier base existe
+        BASE_DIR.mkdir(parents=True, exist_ok=True)
         
-        # Création du dossier de sortie ET d'un fichier test pour forcer les droits d'écriture
-        out_dir = APP_DOCS / "photos_traitees"
-        out_dir.mkdir(parents=True, exist_ok=True)
-        test_write = out_dir / ".write_test"
-        test_write.write_text("ok")
-        
-        files = [f for f in APP_DOCS.iterdir() if f.suffix.lower() in EXTS and not f.name.startswith(".")]
+        # On scanne UNIQUEMENT le dossier base
+        files = [f for f in BASE_DIR.iterdir() if f.suffix.lower() in EXTS and not f.name.startswith(".")]
         count = len(files)
         
-        STATE["base"] = str(APP_DOCS)
+        STATE["base"] = str(BASE_DIR)
         
         if count > 0:
-            debug(f"✅ {count} image(s) source(s) trouvée(s).")
+            debug(f"✅ {count} image(s) source(s) trouvée(s) dans /base.")
         else:
-            debug("⚠️ Aucune image source. Ajoute des photos .jpg dans le dossier.")
+            debug("⚠️ Aucune image. Dépose tes photos dans le dossier 'base'.")
             
     except Exception as e:
         STATE["base"] = None
@@ -72,8 +72,8 @@ def run_processing(n, model, ratio):
             raise RuntimeError("Aucun dossier prêt.")
             
         base = Path(STATE["base"])
-        out = base / "photos_traitees"
-        out.mkdir(exist_ok=True)
+        # ON ENREGISTRE DANS LE DOSSIER PRINCIPAL
+        out = APP_DOCS 
 
         debug("Traitement en cours...")
 
@@ -127,7 +127,7 @@ def make_handler(app):
                 state = dict(STATE)
                 if STATE.get("base"):
                     state["count"] = count_images(STATE["base"])
-                    state["name"] = "Dossier de l'App"
+                    state["name"] = "Dossier /base"
                 else:
                     state["count"] = 0
                     state["name"] = None
@@ -160,10 +160,7 @@ def make_handler(app):
 class RandomizerPhoto(toga.App):
     def startup(self):
         APP_DOCS.mkdir(parents=True, exist_ok=True)
-        
-        test_file = APP_DOCS / "readme.txt"
-        if not test_file.exists():
-            test_file.write_text("Dépose tes photos (.jpg, .png) ici !")
+        BASE_DIR.mkdir(parents=True, exist_ok=True)
 
         server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self))
         threading.Thread(target=server.serve_forever, daemon=True).start()
