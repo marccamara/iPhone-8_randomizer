@@ -16,11 +16,8 @@ from .processing import process_folder_advanced
 HERE = Path(__file__).parent
 APP_DOCS = Path.home() / "Documents"
 HIST = APP_DOCS / "used_file_names.json"
-EXTS = (".jpg", ".jpeg", ".png", ".webp", ".heic")
+EXTS = (".jpg", ".jpeg", ".png", ".webp")
 
-# ============================================================
-# ÉTAT GLOBAL
-# ============================================================
 STATE = {
     "base": None, "dbg": "Application prête.", "done": 0, "total": 0, 
     "running": False, "finished": False, "error": None,
@@ -30,22 +27,21 @@ def debug(message):
     STATE["dbg"] = str(message)
     print("[RandomizerPhoto]", message)
 
-# ============================================================
-# SCAN DU DOSSIER DOCUMENTS
-# ============================================================
 def scan_documents_folder():
     try:
         APP_DOCS.mkdir(parents=True, exist_ok=True)
+        # On s'assure que le dossier de sortie existe
+        (APP_DOCS / "photos_traitees").mkdir(parents=True, exist_ok=True)
         
-        files = [f for f in APP_DOCS.iterdir() if f.suffix.lower() in EXTS and not f.name.startswith(".")]
+        files = [f for f in APP_DOCS.iterdir() if f.suffix.lower() in EXTS and not f.name.startswith(".") and not f.name.startswith("IMG_")]
         count = len(files)
         
         STATE["base"] = str(APP_DOCS)
         
         if count > 0:
-            debug(f"✅ {count} image(s) trouvée(s) dans le dossier.")
+            debug(f"✅ {count} image(s) source(s) trouvée(s).")
         else:
-            debug("⚠️ Aucune image. Ajoute des photos dans 'Sur mon iPhone > RandomizerPhoto'.")
+            debug("⚠️ Aucune image source. Ajoute des photos .jpg dans le dossier.")
             
     except Exception as e:
         STATE["base"] = None
@@ -54,12 +50,9 @@ def scan_documents_folder():
 
 def count_images(base):
     if not base: return 0
-    try: return sum(1 for f in Path(base).iterdir() if f.suffix.lower() in EXTS)
+    try: return sum(1 for f in Path(base).iterdir() if f.suffix.lower() in EXTS and not f.name.startswith("IMG_"))
     except Exception: return 0
 
-# ============================================================
-# TRAITEMENT & PROGRESSION
-# ============================================================
 def progress(done, total):
     STATE["done"] = done
     STATE["total"] = total
@@ -78,21 +71,23 @@ def run_processing(n, model, ratio):
 
         debug("Traitement en cours...")
 
-        process_folder_advanced(
-            str(base), str(out), n, str(HIST), progress, model, ratio
-        )
-        debug("✅ Traitement terminé.")
+        try:
+            process_folder_advanced(
+                str(base), str(out), n, str(HIST), progress, model, ratio
+            )
+            debug("✅ Traitement terminé avec succès.")
+        except Exception as e:
+            debug(f"❌ CRASH LORS DU TRAITEMENT : {str(e)}")
+            raise e
+
     except Exception as e:
         STATE["error"] = str(e)
-        debug(f"❌ Erreur traitement : {e}")
+        debug(f"❌ Erreur : {e}")
         traceback.print_exc()
     finally:
         STATE["running"] = False
         STATE["finished"] = True
 
-# ============================================================
-# SERVEUR HTTP LOCAL
-# ============================================================
 def make_handler(app):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args): pass
@@ -156,14 +151,10 @@ def make_handler(app):
             self.send_json(404, {"error": "Not found"})
     return Handler
 
-# ============================================================
-# APPLICATION TOGA
-# ============================================================
 class RandomizerPhoto(toga.App):
     def startup(self):
         APP_DOCS.mkdir(parents=True, exist_ok=True)
         
-        # FORCE LA VISIBILITÉ DU DOSSIER DANS FICHIERS
         test_file = APP_DOCS / "readme.txt"
         if not test_file.exists():
             test_file.write_text("Dépose tes photos (.jpg, .png) ici !")
