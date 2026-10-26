@@ -102,7 +102,7 @@ def process_single_image(img, output_path, ratio_str, model_choice):
 
     exif_bytes = generate_iphone_exif(device, camera)
     
-    # Sauvegarde en JPEG pour éviter le crash lié au codec HEIC
+    # Sauvegarde en JPEG
     clean_img.save(output_path, format="JPEG", quality=random.randint(94, 96), exif=exif_bytes)
 
 def generate_unique_filename(used):
@@ -110,7 +110,7 @@ def generate_unique_filename(used):
         r = random.randint(1000, 9999)
         if r not in used:
             used.add(r)
-            return f"IMG_{r}.jpg" # Extension JPG
+            return f"IMG_{r}.jpg"
 
 def load_history(path):
     if os.path.exists(path):
@@ -127,7 +127,9 @@ def save_history(history_set, path):
 
 def process_folder_advanced(input_folder, output_base_folder, num_folders, history_path, progress_callback, model=None, ratio="3:4"):
     exts = ('.jpg', '.jpeg', '.png', '.webp')
-    files = [f for f in os.listdir(input_folder) if f.lower().endswith(exts) and not f.startswith("IMG_")]
+    
+    # PLUS DE FILTRE ICI : On prend toutes les images du dossier source
+    files = [f for f in os.listdir(input_folder) if f.lower().endswith(exts)]
     if not files: return
 
     used = load_history(history_path)
