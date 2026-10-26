@@ -14,8 +14,8 @@ requires = ["numpy", "pillow", "piexif"]
 requires = ["toga-iOS~=0.5", "numpy", "pillow", "piexif"]
 
 [tool.briefcase.app.randomizerphoto.iOS.info]
+# C'est ICI que Briefcase va injecter les clés dans le Info.plist généré
 UIFileSharingEnabled = true
 LSSupportsOpeningDocumentsInPlace = true
-
-[tool.briefcase.app.randomizerphoto.iOS.info.NSAppTransportSecurity]
-NSAllowsLocalNetworking = true
+NSPhotoLibraryUsageDescription = "Cette application a besoin d'accéder aux photos pour les traiter."
+NSDocumentsFolderUsageDescription = "Cette application a besoin d'accéder aux fichiers."
