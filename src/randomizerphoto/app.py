@@ -14,24 +14,16 @@ from .processing import process_folder_advanced
 # CONFIGURATION
 # ============================================================
 HERE = Path(__file__).parent
-
-# C'est ici que tu déposeras tes photos via l'app Fichiers d'iOS
-APP_DOCS = Path.home() / "Documents" 
+APP_DOCS = Path.home() / "Documents"
 HIST = APP_DOCS / "used_file_names.json"
-
-EXTS = (".jpg", ".jpeg", ".png", ".webp")
+EXTS = (".jpg", ".jpeg", ".png", ".webp", ".heic")
 
 # ============================================================
 # ÉTAT GLOBAL
 # ============================================================
 STATE = {
-    "base": None, 
-    "dbg": "Application prête.", 
-    "done": 0, 
-    "total": 0, 
-    "running": False, 
-    "finished": False, 
-    "error": None,
+    "base": None, "dbg": "Application prête.", "done": 0, "total": 0, 
+    "running": False, "finished": False, "error": None,
 }
 
 def debug(message):
@@ -42,7 +34,6 @@ def debug(message):
 # SCAN DU DOSSIER DOCUMENTS
 # ============================================================
 def scan_documents_folder():
-    """Scanne le dossier Documents (accessible via l'app Fichiers)."""
     try:
         APP_DOCS.mkdir(parents=True, exist_ok=True)
         
@@ -135,13 +126,12 @@ def make_handler(app):
                 state = dict(STATE)
                 if STATE.get("base"):
                     state["count"] = count_images(STATE["base"])
-                    state["name"] = "Dossier de l'App" # Nom simplifié pour l'UI
+                    state["name"] = "Dossier de l'App"
                 else:
                     state["count"] = 0
                     state["name"] = None
                 self.send_json(200, state)
                 return
-                
             self.send_json(404, {"error": "Not found"})
 
         def do_POST(self):
@@ -149,7 +139,6 @@ def make_handler(app):
             path = parsed.path
 
             if path == "/pick":
-                # Plus de picker iOS, on scanne juste notre dossier Documents
                 scan_documents_folder()
                 self.send_json(200, {"ok": True})
                 return
@@ -164,7 +153,6 @@ def make_handler(app):
                     threading.Thread(target=run_processing, args=(n, model, ratio), daemon=True).start()
                 self.send_json(200, {"ok": True})
                 return
-                
             self.send_json(404, {"error": "Not found"})
     return Handler
 
@@ -173,15 +161,17 @@ def make_handler(app):
 # ============================================================
 class RandomizerPhoto(toga.App):
     def startup(self):
-        # On s'assure que le dossier existe au démarrage
         APP_DOCS.mkdir(parents=True, exist_ok=True)
+        
+        # FORCE LA VISIBILITÉ DU DOSSIER DANS FICHIERS
+        test_file = APP_DOCS / "readme.txt"
+        if not test_file.exists():
+            test_file.write_text("Dépose tes photos (.jpg, .png) ici !")
 
-        # Lancement du serveur web local en arrière-plan
         server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         port = server.server_address[1]
 
-        # Affichage de l'interface WebView
         self.main_window = toga.MainWindow(title=self.formal_name)
         self.main_window.content = toga.WebView(
             url=f"http://127.0.0.1:{port}/", style=Pack(flex=1)
