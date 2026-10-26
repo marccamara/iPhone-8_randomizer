@@ -6,9 +6,8 @@ import datetime
 import numpy as np
 from PIL import Image, ImageEnhance, ImageOps
 import piexif
-import pillow_heif
 
-pillow_heif.register_heif_opener()
+
 
 IPHONE_PROFILES = [
     {"model": "iPhone 8", "software": "16.7.2", "back": {"focal": (399, 100), "fnum": (18, 10), "focal35": 28, "lens": "iPhone 8 back camera 3.99mm f/1.8", "lens_info": "3.99mm f/1.8", "width": 3024, "height": 4032}, "front": {"focal": (287, 100), "fnum": (22, 10), "focal35": 32, "lens": "iPhone 8 front camera 2.87mm f/2.2", "lens_info": "2.87mm f/2.2", "width": 3024, "height": 4032}},
