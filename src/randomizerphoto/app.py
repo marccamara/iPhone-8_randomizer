@@ -30,9 +30,13 @@ def debug(message):
 def scan_documents_folder():
     try:
         APP_DOCS.mkdir(parents=True, exist_ok=True)
-        (APP_DOCS / "photos_traitees").mkdir(parents=True, exist_ok=True)
         
-        # PLUS DE FILTRE ICI : On compte toutes les images présentes
+        # Création du dossier de sortie ET d'un fichier test pour forcer les droits d'écriture
+        out_dir = APP_DOCS / "photos_traitees"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        test_write = out_dir / ".write_test"
+        test_write.write_text("ok")
+        
         files = [f for f in APP_DOCS.iterdir() if f.suffix.lower() in EXTS and not f.name.startswith(".")]
         count = len(files)
         
@@ -51,7 +55,6 @@ def scan_documents_folder():
 def count_images(base):
     if not base: return 0
     try: 
-        # PLUS DE FILTRE ICI : On compte tout ce qui est image
         return sum(1 for f in Path(base).iterdir() if f.suffix.lower() in EXTS)
     except Exception: 
         return 0
