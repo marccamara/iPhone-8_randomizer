@@ -1,5 +1,6 @@
-name: Build IPA
+name: Build IPA for TrollStore
 on: [workflow_dispatch]
+
 jobs:
   build:
     runs-on: macos-latest
@@ -8,19 +9,43 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      
       - run: pip install briefcase
-      - run: briefcase create iOS --no-input
-      - name: Compiler
+      
+      - name: Create iOS App
+        run: briefcase create iOS --no-input
+
+      - name: Build Xcode Project
         run: |
           set -o pipefail
           PROJ=$(find build -name "*.xcodeproj" -not -path "*/Support/*" | head -n 1)
           SCHEME=$(basename "$PROJ" .xcodeproj)
-          xcodebuild -project "$PROJ" -scheme "$SCHEME" -sdk iphoneos -configuration Release -derivedDataPath dd CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" EXPANDED_CODE_SIGN_IDENTITY="-" build
-      - name: Créer l'IPA
+          xcodebuild -project "$PROJ" -scheme "$SCHEME" \
+            -sdk iphoneos -configuration Release \
+            -derivedDataPath dd \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            EXPANDED_CODE_SIGN_IDENTITY="-" \
+            build
+
+      - name: Patch Info.plist & Create IPA
         run: |
           APP=$(find dd/Build/Products -name "*.app" -maxdepth 2 | head -n 1)
+          echo "App trouvée : $APP"
+          
+          # LA MAGIE EST ICI : on force les clés dans le Info.plist final
+          /usr/libexec/PlistBuddy -c "Delete :UIFileSharingEnabled" "$APP/Info.plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIFileSharingEnabled bool true" "$APP/Info.plist"
+          
+          /usr/libexec/PlistBuddy -c "Delete :LSSupportsOpeningDocumentsInPlace" "$APP/Info.plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :LSSupportsOpeningDocumentsInPlace bool true" "$APP/Info.plist"
+          
+          echo "=== Vérification du Info.plist ==="
+          plutil -p "$APP/Info.plist" | grep -E "UIFileSharingEnabled|LSSupportsOpeningDocumentsInPlace"
+          
           mkdir Payload && cp -r "$APP" Payload/
           zip -qr RandomizerPhoto.ipa Payload
+
       - uses: actions/upload-artifact@v4
         with:
           name: ipa
