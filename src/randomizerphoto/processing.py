@@ -7,8 +7,6 @@ import numpy as np
 from PIL import Image, ImageEnhance, ImageOps
 import piexif
 
-
-
 IPHONE_PROFILES = [
     {"model": "iPhone 8", "software": "16.7.2", "back": {"focal": (399, 100), "fnum": (18, 10), "focal35": 28, "lens": "iPhone 8 back camera 3.99mm f/1.8", "lens_info": "3.99mm f/1.8", "width": 3024, "height": 4032}, "front": {"focal": (287, 100), "fnum": (22, 10), "focal35": 32, "lens": "iPhone 8 front camera 2.87mm f/2.2", "lens_info": "2.87mm f/2.2", "width": 3024, "height": 4032}},
     {"model": "iPhone 11", "software": "16.5", "back": {"focal": (425, 100), "fnum": (18, 10), "focal35": 26, "lens": "iPhone 11 back camera 4.25mm f/1.8", "lens_info": "1.54-4.25mm f/1.8-2.4", "width": 3024, "height": 4032}, "front": {"focal": (271, 100), "fnum": (22, 10), "focal35": 23, "lens": "iPhone 11 front camera 2.71mm f/2.2", "lens_info": "2.71mm f/2.2", "width": 3024, "height": 4032}},
@@ -104,19 +102,15 @@ def process_single_image(img, output_path, ratio_str, model_choice):
 
     exif_bytes = generate_iphone_exif(device, camera)
     
-    buffer = io.BytesIO()
-    clean_img.save(buffer, format="JPEG", quality=random.randint(94, 96), optimize=True)
-    buffer.seek(0)
-    final_img = Image.open(buffer).convert("RGB")
-    
-    final_img.save(output_path, format="HEIF", quality=random.randint(93, 96), exif=exif_bytes)
+    # Sauvegarde en JPEG pour éviter le crash lié au codec HEIC
+    clean_img.save(output_path, format="JPEG", quality=random.randint(94, 96), exif=exif_bytes)
 
 def generate_unique_filename(used):
     while True:
         r = random.randint(1000, 9999)
         if r not in used:
             used.add(r)
-            return f"IMG_{r}.heic"
+            return f"IMG_{r}.jpg" # Extension JPG
 
 def load_history(path):
     if os.path.exists(path):
@@ -126,11 +120,14 @@ def load_history(path):
     return set()
 
 def save_history(history_set, path):
-    with open(path, "w") as f: json.dump(list(history_set), f)
+    try:
+        with open(path, "w") as f: json.dump(list(history_set), f)
+    except Exception as e:
+        print("Impossible de sauvegarder l'historique:", e)
 
 def process_folder_advanced(input_folder, output_base_folder, num_folders, history_path, progress_callback, model=None, ratio="3:4"):
-    exts = ('.jpg', '.jpeg', '.png', '.webp', '.heic')
-    files = [f for f in os.listdir(input_folder) if f.lower().endswith(exts)]
+    exts = ('.jpg', '.jpeg', '.png', '.webp')
+    files = [f for f in os.listdir(input_folder) if f.lower().endswith(exts) and not f.startswith("IMG_")]
     if not files: return
 
     used = load_history(history_path)
@@ -140,8 +137,10 @@ def process_folder_advanced(input_folder, output_base_folder, num_folders, histo
     for i in range(1, num_folders + 1):
         sub = os.path.join(output_base_folder, f"dossier_{i}")
         os.makedirs(sub, exist_ok=True)
+        
         for name in files:
-            out = os.path.join(sub, generate_unique_filename(used))
+            out_name = generate_unique_filename(used)
+            out = os.path.join(sub, out_name)
             try:
                 with Image.open(os.path.join(input_folder, name)) as img:
                     if img.mode in ("RGBA", "P"): img = img.convert("RGB")
