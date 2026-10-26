@@ -5,95 +5,139 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0a0a0c">
+    <meta name="theme-color" content="#050505">
     <title>Randomizer Pro</title>
     <style>
+        /* =========================================================
+           THÈME ANKERGAMES - DARK PREMIUM
+           ========================================================= */
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
         :root {
-            --bg: #0a0a0c;
-            --card: #151518;
-            --border: #27272a;
+            --bg: #050505;
+            --surface: rgba(255, 255, 255, 0.03);
+            --surface-hover: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.08);
             --text: #ffffff;
-            --text-muted: #888893;
-            --primary: #ff9f0a;
-            --success: #30d158;
-            --radius: 16px;
+            --text-muted: #8b8b93;
+            --primary: #ff7a00; /* Orange AnkerGames */
+            --primary-glow: rgba(255, 122, 0, 0.4);
+            --success: #00ff88;
+            --radius: 18px;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body {
             margin: 0;
-            padding: 20px;
-            padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+            padding: 24px;
+            padding-bottom: calc(env(safe-area-inset-bottom) + 30px);
             background: var(--bg);
             color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
             display: flex;
             flex-direction: column;
             gap: 16px;
             min-height: 100vh;
+            /* Grille de fond subtile style gaming */
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(255, 122, 0, 0.15) 0%, transparent 50%),
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px, 30px 30px;
         }
 
-        /* En-tête style AnkerGames */
+        /* En-tête */
         .header {
             text-align: center;
-            margin-bottom: 10px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+            position: relative;
         }
         .header h1 {
             margin: 0;
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 800;
             letter-spacing: -1px;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, #fff, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        .header h1 span { color: var(--primary); }
+        .header h1 span { 
+            color: var(--primary); 
+            -webkit-text-fill-color: var(--primary);
+            text-shadow: 0 0 20px var(--primary-glow);
+        }
         .header p {
             margin: 6px 0 0;
             color: var(--text-muted);
-            font-size: 13px;
-            letter-spacing: 1px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 2px;
             text-transform: uppercase;
         }
 
         .section-title {
-            font-size: 11px;
-            font-weight: 700;
+            font-size: 12px;
+            font-weight: 800;
             color: var(--primary);
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 2px;
             margin-left: 5px;
             margin-bottom: -5px;
-        }
-
-        /* Cartes sombres avec bordures subtiles */
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 16px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 8px;
+        }
+        .section-title::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--border), transparent);
+        }
+
+        /* Cartes de style Glassmorphism */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
             position: relative;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             transition: all 0.2s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         
+        .card:active {
+            transform: scale(0.98);
+            background: var(--surface-hover);
+        }
+
         .card.active {
             border-color: var(--primary);
-            box-shadow: 0 0 15px rgba(255, 159, 10, 0.15);
+            box-shadow: 0 0 20px var(--primary-glow);
         }
 
         .card-icon {
-            font-size: 24px;
-            width: 32px;
-            text-align: center;
+            font-size: 28px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .card-content { flex: 1; }
         
         .card-title {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 600;
             margin-bottom: 4px;
             color: var(--text);
@@ -102,33 +146,32 @@
         .card-sub {
             font-size: 13px;
             color: var(--text-muted);
+            font-weight: 300;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        /* Menu déroulant transparent qui couvre la carte */
         .card select {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
             opacity: 0;
-            font-size: 16px;
             cursor: pointer;
         }
 
-        /* Boutons + et - */
+        /* Stepper + et - */
         .stepper { display: flex; gap: 8px; }
         .stepper button {
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             border-radius: 12px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255,255,255,0.05);
             border: 1px solid var(--border);
             color: white;
             font-size: 22px;
-            font-weight: 500;
+            font-weight: 400;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -144,108 +187,137 @@
         .progress-box {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            margin-top: 10px;
+            gap: 14px;
         }
         
         .progress-header {
             display: flex;
             justify-content: space-between;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
+            align-items: center;
         }
         
-        .progress-header span.pct { color: var(--primary); }
+        .progress-header .pct { 
+            color: var(--primary); 
+            font-size: 20px;
+            font-weight: 800;
+            text-shadow: 0 0 10px var(--primary-glow);
+        }
 
         .track {
-            height: 10px;
-            background: rgba(255, 255, 255, 0.08);
+            height: 8px;
+            background: rgba(0,0,0,0.5);
             border-radius: 10px;
             overflow: hidden;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
         }
         
         .fill {
             height: 100%;
             width: 0%;
-            background: var(--primary);
+            background: linear-gradient(90deg, #ff7a00, #ffb800);
             border-radius: 10px;
             transition: width 0.3s ease, background 0.3s ease;
-            box-shadow: 0 0 10px var(--primary);
+            box-shadow: 0 0 15px var(--primary-glow);
         }
 
         .progress-box.done .fill {
             background: var(--success);
-            box-shadow: 0 0 10px var(--success);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
         }
-        .progress-box.done .pct { color: var(--success); }
+        .progress-box.done .pct { 
+            color: var(--success);
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
 
         .stats {
             display: flex;
             justify-content: space-between;
             font-size: 12px;
             color: var(--text-muted);
-            font-variant-numeric: tabular-nums;
+            font-family: monospace;
+            letter-spacing: 1px;
         }
 
         /* Bouton principal */
         .btn {
             width: 100%;
-            padding: 18px;
+            padding: 20px;
             border: none;
             border-radius: var(--radius);
-            background: linear-gradient(135deg, #ffb340, #ff9f0a);
-            color: #000;
-            font-size: 17px;
+            background: linear-gradient(135deg, #ff7a00, #ff5000);
+            color: #fff;
+            font-size: 16px;
             font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
             margin-top: 10px;
             transition: all 0.2s;
-            box-shadow: 0 4px 15px rgba(255, 159, 10, 0.3);
+            box-shadow: 0 8px 25px rgba(255, 122, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Effet de brillance sur le bouton */
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.5s;
         }
         
         .btn:active {
-            transform: scale(0.98);
-            box-shadow: 0 2px 5px rgba(255, 159, 10, 0.2);
+            transform: scale(0.97);
+            box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3);
         }
         
         .btn:disabled {
-            opacity: 0.4;
+            opacity: 0.3;
             transform: none;
             box-shadow: none;
-            background: var(--border);
-            color: var(--text-muted);
+            background: #333;
+            color: #888;
+            cursor: not-allowed;
         }
 
         .btn.again {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+            background: var(--surface);
+            border: 1px solid var(--border);
             box-shadow: none;
+            color: var(--text);
         }
 
         .hint {
             font-size: 12px;
             text-align: center;
             color: var(--text-muted);
-            margin-top: 5px;
+            margin-top: 10px;
             min-height: 18px;
+            line-height: 1.5;
         }
 
-        /* Footer */
         .footer {
             margin-top: auto;
-            padding-top: 20px;
+            padding-top: 30px;
             text-align: center;
             font-size: 11px;
-            color: var(--text-muted);
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
         .footer strong { color: var(--primary); }
+
     </style>
 </head>
 <body>
 
     <div class="header">
         <h1>Randomizer<span> Pro</span></h1>
-        <p>Photo Processing · EXIF</p>
+        <p>Stealth EXIF · Neural Obfuscation</p>
     </div>
 
     <div class="section-title">Configuration du lot</div>
@@ -253,8 +325,8 @@
     <button class="card" id="pick">
         <div class="card-icon">📁</div>
         <div class="card-content">
-            <div class="card-title">Dossier source</div>
-            <div class="card-sub" id="fsub">Appuie pour choisir</div>
+            <div class="card-title">Dossier de base</div>
+            <div class="card-sub" id="fsub">Appuie pour scanner</div>
         </div>
     </button>
 
@@ -262,7 +334,7 @@
         <div class="card-icon">📱</div>
         <div class="card-content">
             <div class="card-title">Modèle source</div>
-            <div class="card-sub" id="msub">Aléatoire (Mix)</div>
+            <div class="card-sub" id="msub">iPhone 11 à 15 (Mix)</div>
         </div>
         <select id="model">
             <option value="Mix">Aléatoire (Mix)</option>
@@ -278,7 +350,7 @@
     <div class="card">
         <div class="card-icon">📐</div>
         <div class="card-content">
-            <div class="card-title">Format (Ratio)</div>
+            <div class="card-title">Format cible</div>
             <div class="card-sub" id="rsub">3:4 (Portrait)</div>
         </div>
         <select id="ratio">
@@ -292,7 +364,7 @@
     <div class="card">
         <div class="card-icon">🗂️</div>
         <div class="card-content">
-            <div class="card-title">Dossiers de sortie</div>
+            <div class="card-title">Dossiers cibles</div>
             <div class="card-sub" id="nsub">10 Dossiers / 0 Fichiers</div>
         </div>
         <div class="stepper">
@@ -301,7 +373,7 @@
         </div>
     </div>
 
-    <div class="card progress-box" id="prog">
+    <div class="card progress-box" id="prog" style="margin-top: 10px;">
         <div class="progress-header">
             <span id="ptitle">En attente</span>
             <span class="pct" id="pct">0%</span>
@@ -313,12 +385,11 @@
         </div>
     </div>
 
-    <button class="btn" id="go" disabled>✨ Lancer la randomisation</button>
+    <button class="btn" id="go" disabled>Lancer le traitement</button>
     <div class="hint" id="hint"></div>
 
     <footer class="footer">
-        Designed & developed by<br>
-        <strong>CAMARA</strong>
+        Designed by <strong>CAMARA</strong>
     </footer>
 
     <script>
@@ -327,20 +398,15 @@
         const api = (p, m='GET') => fetch(p, { method:m }).then(r => r.json());
         const mm = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(Math.floor(s%60)).padStart(2,'0');
 
-        // Mise à jour du compteur de dossiers
         function step(d) {
             n = Math.min(50, Math.max(1, n + d));
             $('nsub').textContent = `${n} Dossiers / ${n * count} Fichiers`;
         }
 
-        // Mise à jour du texte des menus déroulants
         $('model').onchange = () => $('msub').textContent = $('model').selectedOptions[0].text;
         $('ratio').onchange = () => $('rsub').textContent = $('ratio').selectedOptions[0].text;
-
-        // Ouverture du sélecteur de dossier natif
         $('pick').onclick = () => api('/pick','POST');
 
-        // Gestion de l'affichage de la barre de progression
         function setProg(cls, title, pct) {
             $('prog').className = 'card progress-box ' + cls;
             $('ptitle').textContent = title;
@@ -348,7 +414,6 @@
             $('fill').style.width = pct + '%';
         }
 
-        // Boucle de rafraîchissement de l'état
         async function refresh() {
             const s = await api('/state');
             if (s.dbg) $('hint').textContent = s.dbg;
@@ -375,10 +440,10 @@
                         setProg('err', 'Erreur', 0);
                         $('hint').textContent = s.error;
                     } else {
-                        setProg('done', 'Terminé avec succès', 100);
+                        setProg('done', 'Traitement terminé avec succès', 100);
                         $('cnt').textContent = `${s.total} / ${s.total}`;
                         $('hint').innerHTML = `Résultat dans <b>${s.name} › photos_traitees</b>`;
-                        $('go').textContent = "🔄 Relancer une randomisation";
+                        $('go').textContent = "Relancer une randomisation";
                         $('go').classList.add('again');
                     }
                 }
@@ -389,21 +454,18 @@
             }
         }
 
-        // Lancement automatique toutes les 600ms
         setInterval(refresh, 600);
         refresh();
 
-        // Bouton de lancement
         $('go').onclick = async () => {
             $('hint').textContent = "";
             $('go').classList.remove('again');
-            $('go').textContent = "✨ Lancer la randomisation";
+            $('go').textContent = "Lancer le traitement";
             setProg('running', 'Démarrage…', 0);
             $('go').disabled = true;
             wasRunning = true;
             t0 = Date.now();
 
-            // Envoi de la requête avec le Modèle ET le Ratio choisis
             await api(
                 `/run?n=${n}&model=${encodeURIComponent($('model').value)}&ratio=${encodeURIComponent($('ratio').value)}`,
                 'POST'
