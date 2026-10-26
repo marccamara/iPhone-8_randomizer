@@ -7,6 +7,9 @@ import numpy as np
 from PIL import Image, ImageEnhance, ImageOps
 import piexif
 
+# ============================================================
+# PROFILS IPHONE (Données EXIF réelles)
+# ============================================================
 IPHONE_PROFILES = [
     {"model": "iPhone 8", "software": "16.7.2", "back": {"focal": (399, 100), "fnum": (18, 10), "focal35": 28, "lens": "iPhone 8 back camera 3.99mm f/1.8", "lens_info": "3.99mm f/1.8", "width": 3024, "height": 4032}, "front": {"focal": (287, 100), "fnum": (22, 10), "focal35": 32, "lens": "iPhone 8 front camera 2.87mm f/2.2", "lens_info": "2.87mm f/2.2", "width": 3024, "height": 4032}},
     {"model": "iPhone 11", "software": "16.5", "back": {"focal": (425, 100), "fnum": (18, 10), "focal35": 26, "lens": "iPhone 11 back camera 4.25mm f/1.8", "lens_info": "1.54-4.25mm f/1.8-2.4", "width": 3024, "height": 4032}, "front": {"focal": (271, 100), "fnum": (22, 10), "focal35": 23, "lens": "iPhone 11 front camera 2.71mm f/2.2", "lens_info": "2.71mm f/2.2", "width": 3024, "height": 4032}},
@@ -42,35 +45,6 @@ def center_crop_to_ratio(img, target_ratio=(3, 4)):
         left = 0; top = (orig_h - new_h) // 2
     return img.crop((left, top, left + new_w, top + new_h))
 
-def sensor_noise_realistic(img, iso_level=100):
-    img_array = np.array(img).astype(np.float32) / 255.0
-    shot_scale = 1.0 / np.sqrt(iso_level) * 0.02
-    shot_noise = np.random.poisson(img_array / shot_scale) * shot_scale - img_array
-    read_noise = np.random.normal(0, 0.0015 * (iso_level / 100), img_array.shape)
-    noisy = np.clip((img_array + shot_noise + read_noise) * 255, 0, 255).astype(np.uint8)
-    return Image.fromarray(noisy)
-
-def add_vignetting(img, strength=0.05):
-    img_array = np.array(img).astype(np.float32)
-    h, w = img_array.shape[:2]
-    y, x = np.ogrid[:h, :w]; cx, cy = w / 2, h / 2
-    dist_norm = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) / np.sqrt(cx ** 2 + cy ** 2)
-    vignette = np.clip(1 - strength * (dist_norm ** 2), 0, 1)
-    if img_array.ndim == 3: vignette = vignette[:, :, np.newaxis]
-    return Image.fromarray(np.clip(img_array * vignette, 0, 255).astype(np.uint8))
-
-def film_grain(img, intensity=0.012, grain_size=1.2):
-    img_array = np.array(img).astype(np.float32)
-    h, w = img_array.shape[:2]
-    small_h, small_w = max(1, int(h / grain_size)), max(1, int(w / grain_size))
-    low_freq_noise = np.random.normal(0, 1, (small_h, small_w))
-    grain = np.array(Image.fromarray(((low_freq_noise - low_freq_noise.min()) / (low_freq_noise.max() - low_freq_noise.min()) * 255).astype(np.uint8)).resize((w, h), Image.Resampling.BICUBIC)).astype(np.float32)
-    grain = ((grain - 128) / 128.0) * intensity * 255
-    if img_array.ndim == 3: grain = grain[:, :, np.newaxis]
-    luminance = img_array.mean(axis=2, keepdims=True) / 255.0
-    result = img_array + grain * (1.0 - 0.5 * luminance)
-    return Image.fromarray(np.clip(result, 0, 255).astype(np.uint8))
-
 def process_single_image(img, output_path, ratio_str, model_choice):
     random.seed(os.urandom(16))
     np.random.seed(int.from_bytes(os.urandom(4), "big"))
@@ -88,7 +62,11 @@ def process_single_image(img, output_path, ratio_str, model_choice):
     target_ratio_val = ratio_map.get(ratio_str, (3, 4))
 
     img = center_crop_to_ratio(img, target_ratio=target_ratio_val)
-    img = img.resize((cam_data["width"], cam_data["height"]), Image.Resampling.LANCZOS)
+    
+    # Mode turbo : on réduit la taille pour que ce soit rapide et éviter les crashs mémoire
+    target_width = 1080 
+    target_height = int(target_width * target_ratio_val[1] / target_ratio_val[0])
+    img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
     
     clean_img = Image.new(img.mode, img.size)
     clean_img.putdata(list(img.getdata()))
@@ -96,13 +74,9 @@ def process_single_image(img, output_path, ratio_str, model_choice):
     clean_img = ImageEnhance.Brightness(clean_img).enhance(random.uniform(0.99, 1.02))
     clean_img = ImageEnhance.Contrast(clean_img).enhance(random.uniform(0.99, 1.02))
     clean_img = ImageEnhance.Color(clean_img).enhance(random.uniform(0.99, 1.01))
-    clean_img = add_vignetting(clean_img, strength=random.uniform(0.03, 0.07))
-    clean_img = sensor_noise_realistic(clean_img, iso_level=random.choice([64, 100, 125, 200]))
-    clean_img = film_grain(clean_img, intensity=random.uniform(0.008, 0.018), grain_size=random.uniform(1.0, 1.4))
 
     exif_bytes = generate_iphone_exif(device, camera)
     
-    # Sauvegarde en JPEG
     clean_img.save(output_path, format="JPEG", quality=random.randint(94, 96), exif=exif_bytes)
 
 def generate_unique_filename(used):
@@ -127,7 +101,9 @@ def save_history(history_set, path):
 
 def process_folder_advanced(input_folder, output_base_folder, num_folders, history_path, progress_callback, model=None, ratio="3:4"):
     exts = ('.jpg', '.jpeg', '.png', '.webp')
-    files = [f for f in os.listdir(input_folder) if f.lower().endswith(exts) and not f.startswith(".")]
+    
+    # On lit UNIQUEMENT dans le dossier base
+    files = [f for f in os.listdir(input_folder) if f.lower().endswith(exts)]
     if not files: return
 
     used = load_history(history_path)
@@ -135,22 +111,18 @@ def process_folder_advanced(input_folder, output_base_folder, num_folders, histo
     done = 0
 
     for i in range(1, num_folders + 1):
-        sub = os.path.join(output_base_folder, f"dossier_{i}")
-        os.makedirs(sub, exist_ok=True)
-        
         for name in files:
             out_name = generate_unique_filename(used)
-            out = os.path.join(sub, out_name)
+            # ON ECRIT DIRECTEMENT DANS LE DOSSIER PRINCIPAL
+            out = os.path.join(output_base_folder, out_name)
             try:
                 with Image.open(os.path.join(input_folder, name)) as img:
                     if img.mode in ("RGBA", "P"): img = img.convert("RGB")
                     img = ImageOps.exif_transpose(img)
                     process_single_image(img, out, ratio, model)
                     
-                    # VERIFICATION : Est-ce que le fichier a bien été écrit ?
                     if not os.path.exists(out):
-                        print(f"[!] ERREUR : Le fichier {out_name} n'a pas été écrit sur le disque.")
-                        
+                        print(f"[!] ERREUR : Le fichier {out_name} n'a pas été écrit.")
             except Exception as e:
                 print(f"[-] Erreur sur {name} : {e}")
             
