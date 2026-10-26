@@ -10,13 +10,10 @@ from toga.style import Pack
 
 from .processing import process_folder_advanced
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
 HERE = Path(__file__).parent
 APP_DOCS = Path.home() / "Documents"
 
-# Dossier source spécifique
+# On utilise le dossier base pour TOUT
 BASE_DIR = APP_DOCS / "base"
 HIST = APP_DOCS / "used_file_names.json"
 EXTS = (".jpg", ".jpeg", ".png", ".webp")
@@ -33,11 +30,10 @@ def debug(message):
 def scan_documents_folder():
     try:
         APP_DOCS.mkdir(parents=True, exist_ok=True)
-        # On s'assure que le dossier base existe
         BASE_DIR.mkdir(parents=True, exist_ok=True)
         
-        # On scanne UNIQUEMENT le dossier base
-        files = [f for f in BASE_DIR.iterdir() if f.suffix.lower() in EXTS and not f.name.startswith(".")]
+        # On scanne UNIQUEMENT les photos qui ne sont pas déjà traitées (sans le préfixe R_)
+        files = [f for f in BASE_DIR.iterdir() if f.suffix.lower() in EXTS and not f.name.startswith("R_") and not f.name.startswith(".")]
         count = len(files)
         
         STATE["base"] = str(BASE_DIR)
@@ -55,7 +51,7 @@ def scan_documents_folder():
 def count_images(base):
     if not base: return 0
     try: 
-        return sum(1 for f in Path(base).iterdir() if f.suffix.lower() in EXTS)
+        return sum(1 for f in Path(base).iterdir() if f.suffix.lower() in EXTS and not f.name.startswith("R_"))
     except Exception: 
         return 0
 
@@ -72,8 +68,7 @@ def run_processing(n, model, ratio):
             raise RuntimeError("Aucun dossier prêt.")
             
         base = Path(STATE["base"])
-        # ON ENREGISTRE DANS LE DOSSIER PRINCIPAL
-        out = APP_DOCS 
+        out = base # ON ECRIT DANS LE MEME DOSSIER BASE
 
         debug("Traitement en cours...")
 
