@@ -30,10 +30,10 @@ def debug(message):
 def scan_documents_folder():
     try:
         APP_DOCS.mkdir(parents=True, exist_ok=True)
-        # On s'assure que le dossier de sortie existe
         (APP_DOCS / "photos_traitees").mkdir(parents=True, exist_ok=True)
         
-        files = [f for f in APP_DOCS.iterdir() if f.suffix.lower() in EXTS and not f.name.startswith(".") and not f.name.startswith("IMG_")]
+        # PLUS DE FILTRE ICI : On compte toutes les images présentes
+        files = [f for f in APP_DOCS.iterdir() if f.suffix.lower() in EXTS and not f.name.startswith(".")]
         count = len(files)
         
         STATE["base"] = str(APP_DOCS)
@@ -50,8 +50,11 @@ def scan_documents_folder():
 
 def count_images(base):
     if not base: return 0
-    try: return sum(1 for f in Path(base).iterdir() if f.suffix.lower() in EXTS and not f.name.startswith("IMG_"))
-    except Exception: return 0
+    try: 
+        # PLUS DE FILTRE ICI : On compte tout ce qui est image
+        return sum(1 for f in Path(base).iterdir() if f.suffix.lower() in EXTS)
+    except Exception: 
+        return 0
 
 def progress(done, total):
     STATE["done"] = done
