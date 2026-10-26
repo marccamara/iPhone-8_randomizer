@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0c">
+    <title>Randomizer Pro</title>
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --card: #151518;
+            --border: #27272a;
+            --text: #ffffff;
+            --text-muted: #888893;
+            --primary: #ff9f0a;
+            --success: #30d158;
+            --radius: 16px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-height: 100vh;
+        }
+
+        /* En-tête style AnkerGames */
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        .header h1 span { color: var(--primary); }
+        .header p {
+            margin: 6px 0 0;
+            color: var(--text-muted);
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-left: 5px;
+            margin-bottom: -5px;
+        }
+
+        /* Cartes sombres avec bordures subtiles */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .card.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(255, 159, 10, 0.15);
+        }
+
+        .card-icon {
+            font-size: 24px;
+            width: 32px;
+            text-align: center;
+        }
+
+        .card-content { flex: 1; }
+        
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+        
+        .card-sub {
+            font-size: 13px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Menu déroulant transparent qui couvre la carte */
+        .card select {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* Boutons + et - */
+        .stepper { display: flex; gap: 8px; }
+        .stepper button {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: white;
+            font-size: 22px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.15s;
+        }
+        .stepper button:active {
+            background: var(--primary);
+            color: black;
+            transform: scale(0.95);
+        }
+
+        /* Barre de progression */
+        .progress-box {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .progress-header span.pct { color: var(--primary); }
+
+        .track {
+            height: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+        }
+        
+        .fill {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            border-radius: 10px;
+            transition: width 0.3s ease, background 0.3s ease;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .progress-box.done .fill {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+        .progress-box.done .pct { color: var(--success); }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Bouton principal */
+        .btn {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: var(--radius);
+            background: linear-gradient(135deg, #ffb340, #ff9f0a);
+            color: #000;
+            font-size: 17px;
+            font-weight: 800;
+            margin-top: 10px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(255, 159, 10, 0.3);
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 5px rgba(255, 159, 10, 0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.4;
+            transform: none;
+            box-shadow: none;
+            background: var(--border);
+            color: var(--text-muted);
+        }
+
+        .btn.again {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            box-shadow: none;
+        }
+
+        .hint {
+            font-size: 12px;
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 5px;
+            min-height: 18px;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: auto;
+            padding-top: 20px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .footer strong { color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Randomizer<span> Pro</span></h1>
+        <p>Photo Processing · EXIF</p>
+    </div>
+
+    <div class="section-title">Configuration du lot</div>
+
+    <button class="card" id="pick">
+        <div class="card-icon">📁</div>
+        <div class="card-content">
+            <div class="card-title">Dossier source</div>
+            <div class="card-sub" id="fsub">Appuie pour choisir</div>
+        </div>
+    </button>
+
+    <div class="card">
+        <div class="card-icon">📱</div>
+        <div class="card-content">
+            <div class="card-title">Modèle source</div>
+            <div class="card-sub" id="msub">Aléatoire (Mix)</div>
+        </div>
+        <select id="model">
+            <option value="Mix">Aléatoire (Mix)</option>
+            <option>iPhone 8</option>
+            <option>iPhone 11</option>
+            <option>iPhone 12</option>
+            <option>iPhone 13</option>
+            <option>iPhone 14</option>
+            <option>iPhone 15</option>
+        </select>
+    </div>
+
+    <div class="card">
+        <div class="card-icon">📐</div>
+        <div class="card-content">
+            <div class="card-title">Format (Ratio)</div>
+            <div class="card-sub" id="rsub">3:4 (Portrait)</div>
+        </div>
+        <select id="ratio">
+            <option value="3:4">3:4 (Portrait)</option>
+            <option value="1:1">1:1 (Carré)</option>
+            <option value="9:16">9:16 (Stories)</option>
+            <option value="4:3">4:3 (Paysage)</option>
+        </select>
+    </div>
+
+    <div class="card">
+        <div class="card-icon">🗂️</div>
+        <div class="card-content">
+            <div class="card-title">Dossiers de sortie</div>
+            <div class="card-sub" id="nsub">10 Dossiers / 0 Fichiers</div>
+        </div>
+        <div class="stepper">
+            <button type="button" onclick="step(-1)">−</button>
+            <button type="button" onclick="step(1)">+</button>
+        </div>
+    </div>
+
+    <div class="card progress-box" id="prog">
+        <div class="progress-header">
+            <span id="ptitle">En attente</span>
+            <span class="pct" id="pct">0%</span>
+        </div>
+        <div class="track"><div class="fill" id="fill"></div></div>
+        <div class="stats">
+            <span id="cnt">0 / 0</span>
+            <span id="time">00:00</span>
+        </div>
+    </div>
+
+    <button class="btn" id="go" disabled>✨ Lancer la randomisation</button>
+    <div class="hint" id="hint"></div>
+
+    <footer class="footer">
+        Designed & developed by<br>
+        <strong>CAMARA</strong>
+    </footer>
+
+    <script>
+        let n = 10, count = 0, hasBase = false, wasRunning = false, t0 = 0;
+        const $ = id => document.getElementById(id);
+        const api = (p, m='GET') => fetch(p, { method:m }).then(r => r.json());
+        const mm = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(Math.floor(s%60)).padStart(2,'0');
+
+        // Mise à jour du compteur de dossiers
+        function step(d) {
+            n = Math.min(50, Math.max(1, n + d));
+            $('nsub').textContent = `${n} Dossiers / ${n * count} Fichiers`;
+        }
+
+        // Mise à jour du texte des menus déroulants
+        $('model').onchange = () => $('msub').textContent = $('model').selectedOptions[0].text;
+        $('ratio').onchange = () => $('rsub').textContent = $('ratio').selectedOptions[0].text;
+
+        // Ouverture du sélecteur de dossier natif
+        $('pick').onclick = () => api('/pick','POST');
+
+        // Gestion de l'affichage de la barre de progression
+        function setProg(cls, title, pct) {
+            $('prog').className = 'card progress-box ' + cls;
+            $('ptitle').textContent = title;
+            $('pct').textContent = Math.round(pct) + '%';
+            $('fill').style.width = pct + '%';
+        }
+
+        // Boucle de rafraîchissement de l'état
+        async function refresh() {
+            const s = await api('/state');
+            if (s.dbg) $('hint').textContent = s.dbg;
+
+            if (s.base) {
+                hasBase = true;
+                count = s.count;
+                $('fsub').textContent = `${s.name} • ${s.count} photo(s)`;
+                $('pick').classList.add('active');
+                $('nsub').textContent = `${n} Dossiers / ${n * count} Fichiers`;
+            }
+
+            if (s.running) {
+                if (!wasRunning) { wasRunning = true; t0 = Date.now(); }
+                const pct = s.total ? (s.done * 100 / s.total) : 0;
+                setProg('running', 'Traitement en cours…', pct);
+                $('cnt').textContent = `${s.done} / ${s.total}`;
+                $('time').textContent = mm((Date.now() - t0) / 1000);
+                $('go').disabled = true;
+            } else {
+                if (s.finished && wasRunning) {
+                    wasRunning = false;
+                    if (s.error) {
+                        setProg('err', 'Erreur', 0);
+                        $('hint').textContent = s.error;
+                    } else {
+                        setProg('done', 'Terminé avec succès', 100);
+                        $('cnt').textContent = `${s.total} / ${s.total}`;
+                        $('hint').innerHTML = `Résultat dans <b>${s.name} › photos_traitees</b>`;
+                        $('go').textContent = "🔄 Relancer une randomisation";
+                        $('go').classList.add('again');
+                    }
+                }
+                $('go').disabled = !(hasBase && count > 0);
+                if (hasBase && count === 0) {
+                    $('hint').textContent = "Aucune image valide dans ce dossier.";
+                }
+            }
+        }
+
+        // Lancement automatique toutes les 600ms
+        setInterval(refresh, 600);
+        refresh();
+
+        // Bouton de lancement
+        $('go').onclick = async () => {
+            $('hint').textContent = "";
+            $('go').classList.remove('again');
+            $('go').textContent = "✨ Lancer la randomisation";
+            setProg('running', 'Démarrage…', 0);
+            $('go').disabled = true;
+            wasRunning = true;
+            t0 = Date.now();
+
+            // Envoi de la requête avec le Modèle ET le Ratio choisis
+            await api(
+                `/run?n=${n}&model=${encodeURIComponent($('model').value)}&ratio=${encodeURIComponent($('ratio').value)}`,
+                'POST'
+            );
+        };
+    </script>
+</body>
+</html>
