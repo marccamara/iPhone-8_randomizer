@@ -127,9 +127,7 @@ def save_history(history_set, path):
 
 def process_folder_advanced(input_folder, output_base_folder, num_folders, history_path, progress_callback, model=None, ratio="3:4"):
     exts = ('.jpg', '.jpeg', '.png', '.webp')
-    
-    # PLUS DE FILTRE ICI : On prend toutes les images du dossier source
-    files = [f for f in os.listdir(input_folder) if f.lower().endswith(exts)]
+    files = [f for f in os.listdir(input_folder) if f.lower().endswith(exts) and not f.startswith(".")]
     if not files: return
 
     used = load_history(history_path)
@@ -148,6 +146,11 @@ def process_folder_advanced(input_folder, output_base_folder, num_folders, histo
                     if img.mode in ("RGBA", "P"): img = img.convert("RGB")
                     img = ImageOps.exif_transpose(img)
                     process_single_image(img, out, ratio, model)
+                    
+                    # VERIFICATION : Est-ce que le fichier a bien été écrit ?
+                    if not os.path.exists(out):
+                        print(f"[!] ERREUR : Le fichier {out_name} n'a pas été écrit sur le disque.")
+                        
             except Exception as e:
                 print(f"[-] Erreur sur {name} : {e}")
             
