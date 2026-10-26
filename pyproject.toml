@@ -8,10 +8,10 @@ license.file = "LICENSE"
 formal_name = "RandomizerPhoto"
 description = "Randomizer Photo Pro"
 sources = ["src/randomizerphoto"]
-requires = ["numpy", "pillow", "piexif", "pillow-heif"]
+requires = ["numpy", "pillow", "piexif"]
 
 [tool.briefcase.app.randomizerphoto.iOS]
-requires = ["toga-iOS~=0.5", "numpy", "pillow", "piexif", "pillow-heif"]
+requires = ["toga-iOS~=0.5", "numpy", "pillow", "piexif"]
 
 [tool.briefcase.app.randomizerphoto.iOS.info]
 UIFileSharingEnabled = true
